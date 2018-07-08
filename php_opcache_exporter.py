@@ -63,6 +63,9 @@ class OpcacheCollector(object):
                 "lastStableBuild", "lastSuccessfulBuild", "lastUnstableBuild",
                 "lastUnsuccessfulBuild"]
 
+    def __init__(self, phpcode):
+        self._phpcode = phpcode
+
     def collect(self):
         start = time.time()
 
@@ -395,8 +398,7 @@ def main():
     try:
         args = parse_args()
         port = int(args.port)
-        phpcode = args.phpcode
-        REGISTRY.register(OpcacheCollector())
+        REGISTRY.register(OpcacheCollector(args.phpcode))
         start_http_server(port)
         print("Polling... Serving at port: {}".format(args.port))
         while True:
@@ -404,7 +406,6 @@ def main():
     except KeyboardInterrupt:
         print(" Interrupted")
         exit(0)
-
 
 if __name__ == "__main__":
     main()
