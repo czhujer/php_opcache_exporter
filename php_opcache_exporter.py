@@ -15,6 +15,8 @@ import socket
 import random
 import sys
 from io import BytesIO
+import tempfile
+
 DEBUG = int(os.environ.get('DEBUG', '0'))
 
 COLLECTION_TIME = Summary('php_opcache_collector_collect_seconds', 'Time spent to collect metrics from PHP OPcache')
@@ -47,6 +49,13 @@ def force_text(s):
     else:
         s = str(s)
     return s
+
+def UmaskNamedTemporaryFile(*args, **kargs):
+    fdesc = tempfile.NamedTemporaryFile(*args, **kargs)
+    umask = os.umask(0)
+    os.umask(umask)
+    os.chmod(fdesc.name, 0o666 & ~umask)
+    return fdesc
 
 class OpcacheCollector(object):
     # The metrics we want to export about.
