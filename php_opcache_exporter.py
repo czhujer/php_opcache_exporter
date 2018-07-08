@@ -17,7 +17,10 @@ import sys
 from io import BytesIO
 import tempfile
 
+import json
+
 DEBUG = int(os.environ.get('DEBUG', '0'))
+DEBUG2 = int(os.environ.get('DEBUG2', '0'))
 
 COLLECTION_TIME = Summary('php_opcache_collector_collect_seconds', 'Time spent to collect metrics from PHP OPcache')
 
@@ -59,9 +62,8 @@ def UmaskNamedTemporaryFile(*args, **kargs):
 
 class OpcacheCollector(object):
     # The metrics we want to export about.
-    metrics = ["lastBuild", "lastCompletedBuild", "lastFailedBuild",
-                "lastStableBuild", "lastSuccessfulBuild", "lastUnstableBuild",
-                "lastUnsuccessfulBuild"]
+    statuses = ["opcache_enabled", "cache_full", "restart_pending",
+                "restart_in_progress"]
 
     def __init__(self, phpcode, phpcontent, fhost, fport):
         self._phpcode = phpcode
@@ -73,18 +75,19 @@ class OpcacheCollector(object):
         start = time.time()
 
         # Request data from PHP Opcache
-        jobs = self._request_data()
+        values = self._request_data()
+        values_json = json.loads(values)
 
         self._setup_empty_prometheus_metrics()
 
-        #for job in jobs:
-        #    name = job['fullName']
-        #    if DEBUG:
-        #        print("Found Job: {}".format(name))
-        #        pprint(job)
-        #    self._get_metrics(name, job)
+        for key in values_json:
+            value = values_json[key]
+            if key != "scripts":
+                if DEBUG2:
+                    print("The key and value are ({}) = ({})".format(key, value))
+                self._get_metrics(key, value)
 
-        for status in self.metrics:
+        for status in self.statuses:
             for metric in self._prometheus_metrics[status].values():
                 yield metric
 
@@ -140,18 +143,12 @@ class OpcacheCollector(object):
             print "converted response:"
             print(response_force_text)
 
-        url = 'xxx/api/json'
-        jobs = "[fullName,number,timestamp,duration,actions[queuingDurationMillis,totalDurationMillis," \
-               "skipCount,failCount,totalCount,passCount]]"
-        tree = 'jobs[fullName,url,{0}]'.format(','.join([s + jobs for s in self.metrics]))
-        params = {
-            'tree': tree,
-        }
+        return response_body
 
     def _setup_empty_prometheus_metrics(self):
         # The metrics we want to export.
         self._prometheus_metrics = {}
-        for status in self.metrics:
+        for status in self.statuses:
             snake_case = re.sub('([A-Z])', '_\\1', status).lower()
             self._prometheus_metrics[status] = {
                 'number':
