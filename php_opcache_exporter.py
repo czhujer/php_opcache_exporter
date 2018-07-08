@@ -93,11 +93,52 @@ class OpcacheCollector(object):
 
     def _request_data(self):
         # Request exactly the information we need from Opcache
-        try:
-            data = json.loads(sys.argv[1])
-        except:
-            if DEBUG:
-                print "ERROR with calling php"
+
+        #make tmpfile with php code
+        tmpfile = UmaskNamedTemporaryFile(suffix='.php')
+        with open(tmpfile.name, 'w') as f:
+            f.write(self._phpcode)
+
+        #get php content
+        client = FastCGIClient(self._fhost, self._fport, 3, 0)
+        params = dict()
+        documentRoot = "/tmp"
+        uri = tmpfile.name
+        scriptname = uri.replace('/tmp','',1)
+        content = self._phpcontent
+        params = {
+            'GATEWAY_INTERFACE': 'FastCGI/1.0',
+            'REQUEST_METHOD': 'POST',
+            'SCRIPT_FILENAME': uri,
+            'SCRIPT_NAME': scriptname,
+            'QUERY_STRING': '',
+            'REQUEST_URI': scriptname,
+            'DOCUMENT_ROOT': documentRoot,
+            'SERVER_SOFTWARE': 'php/fcgiclient',
+            'REMOTE_ADDR': '127.0.0.1',
+            'REMOTE_PORT': '9985',
+            'SERVER_ADDR': '127.0.0.1',
+            'SERVER_PORT': '80',
+            'SERVER_NAME': "localhost",
+            'SERVER_PROTOCOL': 'HTTP/1.1',
+            'CONTENT_TYPE': 'application/text',
+            'CONTENT_LENGTH': "%d" % len(content),
+            'PHP_VALUE': 'auto_prepend_file = php://input',
+            'PHP_ADMIN_VALUE': 'allow_url_include = On'
+        }
+        response = client.request(params, content)
+        if DEBUG:
+            print "params: "
+            print params
+            print "response:"
+            print(force_text(response))
+
+        response_body = "\n".join(response.split("\n")[3:])
+        response_force_text = force_text(response_body)
+
+        if DEBUG:
+            print "converted response:"
+            print(response_force_text)
 
         url = 'xxx/api/json'
         jobs = "[fullName,number,timestamp,duration,actions[queuingDurationMillis,totalDurationMillis," \
