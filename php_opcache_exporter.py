@@ -401,7 +401,7 @@ def main():
     try:
         args = parse_args()
         port = int(args.port)
-        REGISTRY.register(OpcacheCollector(args.phpcode, args.fhost, args.fport))
+        REGISTRY.register(OpcacheCollector(args.phpcode, args.phpcontent, args.fhost, args.fport))
         start_http_server(port)
         print("Polling... Serving at port: {}".format(args.port))
         while True:
