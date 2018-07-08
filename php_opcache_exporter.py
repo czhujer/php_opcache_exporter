@@ -63,8 +63,11 @@ class OpcacheCollector(object):
                 "lastStableBuild", "lastSuccessfulBuild", "lastUnstableBuild",
                 "lastUnsuccessfulBuild"]
 
-    def __init__(self, phpcode):
+    def __init__(self, phpcode, phpcontent, fhost, fport):
         self._phpcode = phpcode
+        self._phpcontent = phpcontent
+        self._fhost = fhost
+        self._fport = fport
 
     def collect(self):
         start = time.time()
@@ -398,7 +401,7 @@ def main():
     try:
         args = parse_args()
         port = int(args.port)
-        REGISTRY.register(OpcacheCollector(args.phpcode))
+        REGISTRY.register(OpcacheCollector(args.phpcode, args.fhost, args.fport))
         start_http_server(port)
         print("Polling... Serving at port: {}".format(args.port))
         while True:
