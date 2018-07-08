@@ -376,6 +376,12 @@ def parse_args():
         default=''
     )
     parser.add_argument(
+        '--phpcode',
+        metavar='phpcode',
+        help='code for execution over fastcgi client',
+        default='<?php echo (json_encode(opcache_get_status(),JSON_PRETTY_PRINT)); ?>'
+    )
+    parser.add_argument(
         '--fport',
         help='FastCGI port',
         default=9000,
@@ -389,6 +395,7 @@ def main():
     try:
         args = parse_args()
         port = int(args.port)
+        phpcode = args.phpcode
         REGISTRY.register(OpcacheCollector())
         start_http_server(port)
         print("Polling... Serving at port: {}".format(args.port))
