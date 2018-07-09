@@ -61,9 +61,6 @@ def UmaskNamedTemporaryFile(*args, **kargs):
     return fdesc
 
 class OpcacheCollector(object):
-    # The metrics we want to export about.
-    statuses = ["opcache_enabled", "cache_full", "restart_pending",
-                "restart_in_progress"]
 
     def __init__(self, phpcode, phpcontent, fhost, fport):
         self._phpcode = phpcode
@@ -74,22 +71,43 @@ class OpcacheCollector(object):
     def collect(self):
         start = time.time()
 
+        # The metrics we want to export about.
+        #items = ["opcache_enabled", "cache_full", "restart_pending",
+        #            "restart_in_progress"]
+        items = ["opcache_enabled"]
+
+        # The metrics we want to export.
+        metrics = {
+            'opcache_enabled':
+                GaugeMetricFamily('php_opcache_opcache_enabled', 'PHP OPcache opcache_enabled'),
+#              'duration':
+#                  GaugeMetricFamily('php_opcache_{0}_duration_seconds'.format(snake_case),
+#                      'PHP OPcache duration in seconds for {0}'.format(i), labels=["jobname"]),
+#              'timestamp':
+#                  GaugeMetricFamily('php_opcache_{0}_timestamp_seconds'.format(snake_case),
+#                      'PHP OPcache timestamp in unixtime for {0}'.format(i), labels=["jobname"]),
+        }
+
         # Request data from PHP Opcache
         values = self._request_data()
         values_json = json.loads(values)
 
-        self._setup_empty_prometheus_metrics()
-
+        # filter metrics and transform into array
         for key in values_json:
             value = values_json[key]
             if key != "scripts":
                 if DEBUG2:
                     print("The key and value are ({}) = ({})".format(key, value))
-                self._get_metrics(key, value)
+                if key in items:
+                    if value == True:
+                        metrics[key].add_metric('',1)
+                    elif value == False:
+                        metrics[key].add_metric('',0)
+                    else:
+                        metrics[key].add_metric('',value)
 
-        for status in self.statuses:
-            for metric in self._prometheus_metrics[status].values():
-                yield metric
+        for i in items:
+          yield metrics[i]
 
         duration = time.time() - start
         COLLECTION_TIME.observe(duration)
@@ -148,72 +166,6 @@ class OpcacheCollector(object):
             print(response_force_text)
 
         return response_body
-
-    def _setup_empty_prometheus_metrics(self):
-        # The metrics we want to export.
-        self._prometheus_metrics = {}
-        for status in self.statuses:
-            snake_case = re.sub('([A-Z])', '_\\1', status).lower()
-            self._prometheus_metrics[status] = {
-                'number':
-                    GaugeMetricFamily('php_opcache_{0}'.format(snake_case),
-                                      'PHP OPcache number for {0}'.format(status), labels=["jobname"]),
-                'duration':
-                    GaugeMetricFamily('php_opcache_{0}_duration_seconds'.format(snake_case),
-                                      'PHP OPcache duration in seconds for {0}'.format(status), labels=["jobname"]),
-                'timestamp':
-                    GaugeMetricFamily('php_opcache_{0}_timestamp_seconds'.format(snake_case),
-                                      'PHP OPcache timestamp in unixtime for {0}'.format(status), labels=["jobname"]),
-                'queuingDurationMillis':
-                    GaugeMetricFamily('php_opcache_{0}_queuing_duration_seconds'.format(snake_case),
-                                      'PHP OPcache queuing duration in seconds for {0}'.format(status),
-                                      labels=["jobname"]),
-                'totalDurationMillis':
-                    GaugeMetricFamily('php_opcache_{0}_total_duration_seconds'.format(snake_case),
-                                      'PHP OPcache total duration in seconds for {0}'.format(status), labels=["jobname"]),
-                'skipCount':
-                    GaugeMetricFamily('php_opcache_{0}_skip_count'.format(snake_case),
-                                      'PHP OPcache skip counts for {0}'.format(status), labels=["jobname"]),
-                'failCount':
-                    GaugeMetricFamily('php_opcache_{0}_fail_count'.format(snake_case),
-                                      'PHP OPcache fail counts for {0}'.format(status), labels=["jobname"]),
-                'totalCount':
-                    GaugeMetricFamily('php_opcache_{0}_total_count'.format(snake_case),
-                                      'PHP OPcache total counts for {0}'.format(status), labels=["jobname"]),
-                'passCount':
-                    GaugeMetricFamily('php_opcache_{0}_pass_count'.format(snake_case),
-                                      'PHP OPcache pass counts for {0}'.format(status), labels=["jobname"]),
-            }
-
-    def _get_metrics(self, name, job):
-        for status in self.statuses:
-            if status in job.keys():
-                status_data = job[status] or {}
-                self._add_data_to_prometheus_structure(status, status_data, job, name)
-
-    def _add_data_to_prometheus_structure(self, status, status_data, job, name):
-        # If there's a null result, we want to pass.
-        if status_data.get('duration', 0):
-            self._prometheus_metrics[status]['duration'].add_metric([name], status_data.get('duration') / 1000.0)
-        if status_data.get('timestamp', 0):
-            self._prometheus_metrics[status]['timestamp'].add_metric([name], status_data.get('timestamp') / 1000.0)
-        if status_data.get('number', 0):
-            self._prometheus_metrics[status]['number'].add_metric([name], status_data.get('number'))
-        actions_metrics = status_data.get('actions', [{}])
-        for metric in actions_metrics:
-            if metric.get('queuingDurationMillis', False):
-                self._prometheus_metrics[status]['queuingDurationMillis'].add_metric([name], metric.get('queuingDurationMillis') / 1000.0)
-            if metric.get('totalDurationMillis', False):
-                self._prometheus_metrics[status]['totalDurationMillis'].add_metric([name], metric.get('totalDurationMillis') / 1000.0)
-            if metric.get('skipCount', False):
-                self._prometheus_metrics[status]['skipCount'].add_metric([name], metric.get('skipCount'))
-            if metric.get('failCount', False):
-                self._prometheus_metrics[status]['failCount'].add_metric([name], metric.get('failCount'))
-            if metric.get('totalCount', False):
-                self._prometheus_metrics[status]['totalCount'].add_metric([name], metric.get('totalCount'))
-                # Calculate passCount by subtracting fails and skips from totalCount
-                passcount = metric.get('totalCount') - metric.get('failCount') - metric.get('skipCount')
-                self._prometheus_metrics[status]['passCount'].add_metric([name], passcount)
 
 class FastCGIClient:
     # Referrer: https://github.com/wuyunfeng/Python-FastCGI-Client
