@@ -136,6 +136,10 @@ class OpcacheCollector(object):
             print "response:"
             print(force_text(response))
 
+        if not response:
+            print "ERROR: response for fastcgi call is empty"
+            exit(2)
+
         response_body = "\n".join(response.split("\n")[3:])
         response_force_text = force_text(response_body)
 
