@@ -1,5 +1,5 @@
 # PHP OPcache exporter
-PHP opcache exrpoter for prometheus.io, written in python.
+PHP opcache exporter for prometheus.io, written in python.
 
 Data is fetched from [opcache_get_status()](http://php.net/manual/en/function.opcache-get-status.php) function.
 
