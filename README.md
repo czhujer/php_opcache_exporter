@@ -1,7 +1,7 @@
 # PHP OPcache exporter
 PHP opcache exrpoter for prometheus.io, written in python.
 
-Data is fetched from (opcache_get_status())[http://php.net/manual/en/function.opcache-get-status.php] function.
+Data is fetched from [opcache_get_status()](http://php.net/manual/en/function.opcache-get-status.php) function.
 
 tested on CentOS 7 with php-fpm 7.1.
 
