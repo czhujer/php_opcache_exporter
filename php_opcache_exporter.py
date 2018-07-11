@@ -72,7 +72,11 @@ class OpcacheCollector(object):
         start = time.time()
 
         # The metrics we want to export about.
-        items = ["opcache_enabled", "cache_full", "restart_in_progress", "restart_pending"]
+        items = ["opcache_enabled", "cache_full", "restart_in_progress", "restart_pending",
+                 "interned_string_usage",
+                 ]
+
+        items2 = ["used_memory", "buffer_size", "number_of_strings", "free_memory"]
 
         # The metrics we want to export.
         metrics = {
@@ -84,6 +88,14 @@ class OpcacheCollector(object):
                 GaugeMetricFamily('php_opcache_restart_in_progress', 'PHP OPcache restart_in_progress'),
             'restart_pending':
                 GaugeMetricFamily('php_opcache_restart_pending', 'PHP OPcache restart_pending'),
+            'interned_strings_usage_used_memory':
+                GaugeMetricFamily('php_opcache_interned_strings_usage_used_memory', 'PHP OPcache interned_strings_usage used_memory'),
+            'interned_strings_usage_buffer_size':
+                GaugeMetricFamily('php_opcache_interned_strings_usage_buffer_size', 'PHP OPcache interned_strings_usage buffer_size'),
+            'interned_strings_usage_number_of_strings':
+                GaugeMetricFamily('php_opcache_interned_strings_usage_number_of_strings', 'PHP OPcache interned_strings_usage number_of_strings'),
+            'interned_strings_usage_free_memory':
+                GaugeMetricFamily('php_opcache_interned_strings_usage_free_memory', 'PHP OPcache interned_strings_usage free_memory'),
         }
 
         # Request data from PHP Opcache
@@ -101,10 +113,17 @@ class OpcacheCollector(object):
                         metrics[key].add_metric('',1)
                     elif value == False:
                         metrics[key].add_metric('',0)
+                    elif type(value) is dict:
+                        if re.match('^interned_strings.*', key) is not None:
+                            for key2 in value:
+                                if key2 in items2:
+                                    print("The key and value are ({}) = ({})".format(key2, value[key2]))
+                                    key2_c = key.encode('ascii') + "_" + key2.encode('ascii')
+                                    metrics[key2_c].add_metric('',value[key2])
                     else:
                         metrics[key].add_metric('',value)
 
-        for i in items:
+        for i in metrics:
           yield metrics[i]
 
         duration = time.time() - start
