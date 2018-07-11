@@ -72,20 +72,18 @@ class OpcacheCollector(object):
         start = time.time()
 
         # The metrics we want to export about.
-        #items = ["opcache_enabled", "cache_full", "restart_pending",
-        #            "restart_in_progress"]
-        items = ["opcache_enabled"]
+        items = ["opcache_enabled", "cache_full", "restart_in_progress", "restart_pending"]
 
         # The metrics we want to export.
         metrics = {
             'opcache_enabled':
                 GaugeMetricFamily('php_opcache_opcache_enabled', 'PHP OPcache opcache_enabled'),
-#              'duration':
-#                  GaugeMetricFamily('php_opcache_{0}_duration_seconds'.format(snake_case),
-#                      'PHP OPcache duration in seconds for {0}'.format(i), labels=["jobname"]),
-#              'timestamp':
-#                  GaugeMetricFamily('php_opcache_{0}_timestamp_seconds'.format(snake_case),
-#                      'PHP OPcache timestamp in unixtime for {0}'.format(i), labels=["jobname"]),
+            'cache_full':
+                GaugeMetricFamily('php_opcache_cache_full', 'PHP OPcache cache_full'),
+            'restart_in_progress':
+                GaugeMetricFamily('php_opcache_restart_in_progress', 'PHP OPcache restart_in_progress'),
+            'restart_pending':
+                GaugeMetricFamily('php_opcache_restart_pending', 'PHP OPcache restart_pending'),
         }
 
         # Request data from PHP Opcache
