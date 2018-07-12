@@ -73,10 +73,12 @@ class OpcacheCollector(object):
 
         # The metrics we want to export about.
         items = ["opcache_enabled", "cache_full", "restart_in_progress", "restart_pending",
-                 "interned_string_usage",
+                 "interned_strings_usage", "memory_usage",
                  ]
 
         items2 = ["used_memory", "buffer_size", "number_of_strings", "free_memory"]
+
+        items3 = ["used_memory", "wasted_memory", "current_wasted_percentage", "free_memory"]
 
         # The metrics we want to export.
         metrics = {
@@ -96,6 +98,14 @@ class OpcacheCollector(object):
                 GaugeMetricFamily('php_opcache_interned_strings_usage_number_of_strings', 'PHP OPcache interned_strings_usage number_of_strings'),
             'interned_strings_usage_free_memory':
                 GaugeMetricFamily('php_opcache_interned_strings_usage_free_memory', 'PHP OPcache interned_strings_usage free_memory'),
+            'memory_usage_used_memory':
+                GaugeMetricFamily('php_opcache_memory_usage_used_memory', 'PHP OPcache memory_usage used_memory'),
+            'memory_usage_wasted_memory':
+                GaugeMetricFamily('php_opcache_memory_usage_wasted_memory', 'PHP OPcache memory_usage wasted_memory'),
+            'memory_usage_current_wasted_percentage':
+                GaugeMetricFamily('php_opcache_memory_usage_current_wasted_percentage', 'PHP OPcache memory_usage current_wasted_percentage'),
+            'memory_usage_free_memory':
+                GaugeMetricFamily('php_opcache_memory_usage_free_memory', 'PHP OPcache memory_usage free_memory'),
         }
 
         # Request data from PHP Opcache
@@ -117,9 +127,15 @@ class OpcacheCollector(object):
                         if re.match('^interned_strings.*', key) is not None:
                             for key2 in value:
                                 if key2 in items2:
-                                    print("The key and value are ({}) = ({})".format(key2, value[key2]))
+                                    #print("The key and value are ({}) = ({})".format(key2, value[key2]))
                                     key2_c = key.encode('ascii') + "_" + key2.encode('ascii')
                                     metrics[key2_c].add_metric('',value[key2])
+                        elif re.match('^memory_usage.*', key) is not None:
+                            for key3 in value:
+                                if key3 in items3:
+                                    #print("The key and value are ({}) = ({})".format(key3, value[key3]))
+                                    key3_c = key.encode('ascii') + "_" + key3.encode('ascii')
+                                    metrics[key3_c].add_metric('',value[key3])
                     else:
                         metrics[key].add_metric('',value)
 
