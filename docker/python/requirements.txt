@@ -1,2 +1,4 @@
 prometheus_client
 requests
+codecov
+
