@@ -62,7 +62,8 @@ def UmaskNamedTemporaryFile(*args, **kargs):
 
 class OpcacheCollector(object):
 
-    def __init__(self, phpcode, phpcontent, fhost, fport):
+    def __init__(self, scrape_uri, phpcode, phpcontent, fhost, fport):
+        self._scrape_uri = scrape_uri
         self._phpcode = phpcode
         self._phpcontent = phpcontent
         self._fhost = fhost
@@ -139,7 +140,11 @@ class OpcacheCollector(object):
         }
 
         # Request data from PHP Opcache
-        values = self._request_data()
+        if self._scrape_uri:
+            values = self._request_data_over_url()
+        else:
+            values = self._request_data()
+
         values_json = json.loads(values)
 
         # filter metrics and transform into array
@@ -180,6 +185,22 @@ class OpcacheCollector(object):
 
         duration = time.time() - start
         COLLECTION_TIME.observe(duration)
+
+    def _request_data_over_url(self):
+        # Request exactly the information we need from Opcache
+
+        r = requests.get(self._scrape_uri)
+
+        if r.status_code != 200:
+            print "ERROR: status code from scrape-url is wrong (" + str(r.status_code) + ")"
+            exit(14)
+
+        text = r.text
+        if len(text) > 0:
+            return text
+        else:
+            print "ERROR: response for scrape-url is empty"
+            exit(13)
 
     def _request_data(self):
         # Request exactly the information we need from Opcache
@@ -428,6 +449,10 @@ def parse_args():
         default=int(os.environ.get('VIRTUAL_PORT', '9462'))
     )
     parser.add_argument(
+        '--scrape_uri',
+        help='URL for scraping, such as http://127.0.0.1/opcache-status.php',
+    )
+    parser.add_argument(
         '--fhost',
         help='Target FastCGI host, such as 127.0.0.1',
         default='127.0.0.1'
@@ -464,7 +489,7 @@ def main():
     try:
         args = parse_args()
         port = int(args.port)
-        REGISTRY.register(OpcacheCollector(args.phpcode, args.phpcontent, args.fhost, args.fport))
+        REGISTRY.register(OpcacheCollector(args.scrape_uri, args.phpcode, args.phpcontent, args.fhost, args.fport))
         start_http_server(port)
         print("Polling... Serving at port: {}".format(args.port))
         while True:
