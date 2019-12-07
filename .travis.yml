@@ -1,0 +1,21 @@
+# Disable sudo to speed up the build
+sudo: false
+
+language: python
+
+python:
+    - "2.7"
+
+# command to install dependencies
+install: "pip install -r docker/python/requirements.txt"
+
+# command to run tests
+script:
+  # check syntax
+  - python -m py_compile php_opcache_exporter.py
+  # code coverage
+  # - coverage run  php_opcache_exporter.py
+
+#after_success:
+#  - codecov
+
