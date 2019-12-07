@@ -13,7 +13,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: czhujer/php-opcache-exporter:v0.4
+    image: czhujer/php-opcache-exporter:v0.4.1
     ports:
       - 9462:9462
     command: python php_opcache_exporter.py --fhost php
