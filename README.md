@@ -1,7 +1,9 @@
-# php_opcache_exporter
-prometheus exporter for php opcache
+# PHP OPcache exporter
+PHP OPcache exporter for prometheus.io, written in python.
 
-WIP
+Data is fetched from [opcache_get_status()](http://php.net/manual/en/function.opcache-get-status.php) function.
+
+tested on CentOS 7 with php-fpm 7.1.
 
 ## Docs
 

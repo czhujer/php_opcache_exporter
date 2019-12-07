@@ -72,20 +72,70 @@ class OpcacheCollector(object):
         start = time.time()
 
         # The metrics we want to export about.
-        #items = ["opcache_enabled", "cache_full", "restart_pending",
-        #            "restart_in_progress"]
-        items = ["opcache_enabled"]
+        items = ["opcache_enabled", "cache_full", "restart_in_progress", "restart_pending",
+                 "interned_strings_usage", "memory_usage", "opcache_statistics",
+                 ]
+
+        items2 = ["used_memory", "buffer_size", "number_of_strings", "free_memory"]
+
+        items3 = ["used_memory", "wasted_memory", "current_wasted_percentage", "free_memory"]
+
+        items4 = ["hits", "blacklist_miss_ratio", "max_cached_keys", "manual_restarts",
+                  "num_cached_keys", "opcache_hit_rate", "last_restart_time", "start_time",
+                  "misses", "oom_restarts", "num_cached_scripts", "blacklist_misses", "hash_restarts"]
 
         # The metrics we want to export.
         metrics = {
             'opcache_enabled':
                 GaugeMetricFamily('php_opcache_opcache_enabled', 'PHP OPcache opcache_enabled'),
-#              'duration':
-#                  GaugeMetricFamily('php_opcache_{0}_duration_seconds'.format(snake_case),
-#                      'PHP OPcache duration in seconds for {0}'.format(i), labels=["jobname"]),
-#              'timestamp':
-#                  GaugeMetricFamily('php_opcache_{0}_timestamp_seconds'.format(snake_case),
-#                      'PHP OPcache timestamp in unixtime for {0}'.format(i), labels=["jobname"]),
+            'cache_full':
+                GaugeMetricFamily('php_opcache_cache_full', 'PHP OPcache cache_full'),
+            'restart_in_progress':
+                GaugeMetricFamily('php_opcache_restart_in_progress', 'PHP OPcache restart_in_progress'),
+            'restart_pending':
+                GaugeMetricFamily('php_opcache_restart_pending', 'PHP OPcache restart_pending'),
+            'interned_strings_usage_used_memory':
+                GaugeMetricFamily('php_opcache_interned_strings_usage_used_memory', 'PHP OPcache interned_strings_usage used_memory'),
+            'interned_strings_usage_buffer_size':
+                GaugeMetricFamily('php_opcache_interned_strings_usage_buffer_size', 'PHP OPcache interned_strings_usage buffer_size'),
+            'interned_strings_usage_number_of_strings':
+                GaugeMetricFamily('php_opcache_interned_strings_usage_number_of_strings', 'PHP OPcache interned_strings_usage number_of_strings'),
+            'interned_strings_usage_free_memory':
+                GaugeMetricFamily('php_opcache_interned_strings_usage_free_memory', 'PHP OPcache interned_strings_usage free_memory'),
+            'memory_usage_used_memory':
+                GaugeMetricFamily('php_opcache_memory_usage_used_memory', 'PHP OPcache memory_usage used_memory'),
+            'memory_usage_wasted_memory':
+                GaugeMetricFamily('php_opcache_memory_usage_wasted_memory', 'PHP OPcache memory_usage wasted_memory'),
+            'memory_usage_current_wasted_percentage':
+                GaugeMetricFamily('php_opcache_memory_usage_current_wasted_percentage', 'PHP OPcache memory_usage current_wasted_percentage'),
+            'memory_usage_free_memory':
+                GaugeMetricFamily('php_opcache_memory_usage_free_memory', 'PHP OPcache memory_usage free_memory'),
+            'opcache_statistics_hits':
+                GaugeMetricFamily('opcache_statistics_hits', 'PHP OPcache opcache_statistics hits'),
+            'opcache_statistics_blacklist_miss_ratio':
+                GaugeMetricFamily('opcache_statistics_blacklist_miss_ratio', 'PHP OPcache opcache_statistics blacklist_miss_ratio'),
+            'opcache_statistics_max_cached_keys':
+                GaugeMetricFamily('opcache_statistics_max_cached_keys', 'PHP OPcache opcache_statistics max_cached_keys'),
+            'opcache_statistics_manual_restarts':
+                GaugeMetricFamily('opcache_statistics_manual_restarts', 'PHP OPcache opcache_statistics manual_restarts'),
+            'opcache_statistics_num_cached_keys':
+                GaugeMetricFamily('opcache_statistics_num_cached_keys', 'PHP OPcache opcache_statistics num_cached_keys'),
+            'opcache_statistics_opcache_hit_rate':
+                GaugeMetricFamily('opcache_statistics_opcache_hit_rate', 'PHP OPcache opcache_statistics opcache_hit_rate'),
+            'opcache_statistics_last_restart_time':
+                GaugeMetricFamily('opcache_statistics_last_restart_time', 'PHP OPcache opcache_statistics last_restart_time'),
+            'opcache_statistics_start_time':
+                GaugeMetricFamily('opcache_statistics_start_time', 'PHP OPcache opcache_statistics start_time'),
+            'opcache_statistics_misses':
+                GaugeMetricFamily('opcache_statistics_misses', 'PHP OPcache opcache_statistics misses'),
+            'opcache_statistics_oom_restarts':
+                GaugeMetricFamily('opcache_statistics_oom_restarts', 'PHP OPcache opcache_statistics oom_restarts'),
+            'opcache_statistics_num_cached_scripts':
+                GaugeMetricFamily('opcache_statistics_num_cached_scripts', 'PHP OPcache opcache_statistics num_cached_scripts'),
+            'opcache_statistics_blacklist_misses':
+                GaugeMetricFamily('opcache_statistics_blacklist_misses', 'PHP OPcache opcache_statistics blacklist_misses'),
+            'opcache_statistics_hash_restarts':
+                GaugeMetricFamily('opcache_statistics_hash_restarts', 'PHP OPcache opcache_statistics hash_restarts'),
         }
 
         # Request data from PHP Opcache
@@ -103,10 +153,29 @@ class OpcacheCollector(object):
                         metrics[key].add_metric('',1)
                     elif value == False:
                         metrics[key].add_metric('',0)
+                    elif type(value) is dict:
+                        if re.match('^interned_strings.*', key) is not None:
+                            for key2 in value:
+                                if key2 in items2:
+                                    #print("The key and value are ({}) = ({})".format(key2, value[key2]))
+                                    key2_c = key.encode('ascii') + "_" + key2.encode('ascii')
+                                    metrics[key2_c].add_metric('',value[key2])
+                        elif re.match('^memory_usage.*', key) is not None:
+                            for key3 in value:
+                                if key3 in items3:
+                                    #print("The key and value are ({}) = ({})".format(key3, value[key3]))
+                                    key3_c = key.encode('ascii') + "_" + key3.encode('ascii')
+                                    metrics[key3_c].add_metric('',value[key3])
+                        elif re.match('^opcache_statistics.*', key) is not None:
+                            for key4 in value:
+                                if key4 in items4:
+                                    #print("The key and value are ({}) = ({})".format(key4, value[key4]))
+                                    key4_c = key.encode('ascii') + "_" + key4.encode('ascii')
+                                    metrics[key4_c].add_metric('',value[key4])
                     else:
                         metrics[key].add_metric('',value)
 
-        for i in items:
+        for i in metrics:
           yield metrics[i]
 
         duration = time.time() - start
