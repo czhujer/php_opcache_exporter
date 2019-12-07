@@ -1,0 +1,24 @@
+version: '3.7'
+services:
+  php:
+    build:
+      context: ./docker/php
+    volumes:
+      - ./docker/php/docker-php-ext-opcache.ini:/usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
+      - tmp:/tmp
+    ports:
+      - 9000:9000
+
+  python:
+    build:
+      context: .
+      dockerfile: ./docker/python/Dockerfile
+    ports:
+      - 9462:9462
+    command: python php_opcache_exporter.py --fhost php
+    volumes:
+      - ./:/app
+      - tmp:/tmp
+
+volumes:
+  tmp:
