@@ -2,7 +2,7 @@
 
 ## Overview
 
-prometheus exporter for HP OPcache stats, written in python.
+prometheus exporter for PHP OPcache stats, written in python.
 
 
 
